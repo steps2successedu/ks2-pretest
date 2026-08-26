@@ -293,11 +293,25 @@ function logAttempt(scoreSummaryResult, pct){
 }
 
 const COURSES = [
-  { key:'AS', name:'Addition & Subtraction', accent:'#2AB8BC', tint:'#E0F9FA' },
-  { key:'MD', name:'Multiplication & Division', accent:'#3D2FC4', tint:'#EEECFF' },
-  { key:'FR', name:'Fractions', accent:'#C49A00', tint:'#FFF8CC' },
-  { key:'DP', name:'Decimals & Percentages', accent:'#1800AB', tint:'#EEECFF' },
+  { key:'AS', name:'Addition & Subtraction', accent:'#2AB8BC', tint:'#E0F9FA', productId:'6653043' },
+  { key:'MD', name:'Multiplication & Division', accent:'#3D2FC4', tint:'#EEECFF', productId:'6653054' },
+  { key:'FR', name:'Fractions', accent:'#C49A00', tint:'#FFF8CC', productId:'6653056' },
+  { key:'DP', name:'Decimals & Percentages', accent:'#1800AB', tint:'#EEECFF', productId:'6653109' },
 ];
+
+/* Teachable checkout links -- coupon_code on the product's own purchase-page
+   URL auto-applies the discount, no code-typing needed. Coupons themselves
+   (READY5 / READY10) are configured in Teachable, not here -- this file only
+   references them. Expiry copy below must stay in sync with whatever real
+   expiry date is set on those coupons in Teachable; never word this as
+   urgent unless there's a genuine date behind it. */
+const CHECKOUT_BASE_URL = 'https://www.steps2successedu.com/purchase';
+const BUNDLE_PRODUCT_ID = '6665883';
+const COUPON_EXPIRY_DISPLAY = '30 September 2026';
+
+function checkoutUrl(productId, couponCode){
+  return `${CHECKOUT_BASE_URL}?product_id=${productId}&coupon_code=${couponCode}`;
+}
 
 const QUESTIONS = [
   // Addition & Subtraction
@@ -562,16 +576,16 @@ function resultsHTML(){
             <span class="cta-opt-h">Single course</span>
             <span class="cta-opt-code">READY5</span>
             <span class="cta-opt-d">5% off ${esc(worst.name)}</span>
-            <button class="btn btn-ghost-inv">Start with ${esc(worst.name)}</button>
+            <button class="btn btn-ghost-inv" id="btn-cta-single">Start with ${esc(worst.name)}</button>
           </div>
           <div class="cta-opt featured">
             <span class="cta-opt-h">Full bundle</span>
             <span class="cta-opt-code">READY10</span>
             <span class="cta-opt-d">10% off all 4 courses</span>
-            <button class="btn btn-primary">Get the full bundle</button>
+            <button class="btn btn-primary" id="btn-cta-bundle">Get the full bundle</button>
           </div>
         </div>
-        <div class="expiry">Both codes expire in 7 days</div>
+        <div class="expiry">Both codes are valid until ${COUPON_EXPIRY_DISPLAY} &mdash; they won't last forever, so get in soon.</div>
       </div>
 
       <div class="restart"><button id="btn-restart">Preview again from the start</button></div>
@@ -616,6 +630,13 @@ function attachHandlers(){
     document.getElementById('btn-restart').addEventListener('click', () => {
       state = { screen:'intro', name:'', yearGroup:'5', email:'', answers:new Array(QUESTIONS.length).fill(''), unlocked:false };
       render();
+    });
+    const worst = weakestCourse(scoreSummary().byCourse);
+    document.getElementById('btn-cta-single').addEventListener('click', () => {
+      window.location.href = checkoutUrl(worst.productId, 'READY5');
+    });
+    document.getElementById('btn-cta-bundle').addEventListener('click', () => {
+      window.location.href = checkoutUrl(BUNDLE_PRODUCT_ID, 'READY10');
     });
   }
 }
