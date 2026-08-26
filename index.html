@@ -302,12 +302,18 @@ const COURSES = [
 /* Teachable checkout links -- coupon_code on the product's own purchase-page
    URL auto-applies the discount, no code-typing needed. Coupons themselves
    (READY5 / READY10) are configured in Teachable, not here -- this file only
-   references them. Expiry copy below must stay in sync with whatever real
-   expiry date is set on those coupons in Teachable; never word this as
-   urgent unless there's a genuine date behind it. */
+   references them.
+
+   The page deliberately does NOT print the coupon's actual expiry date --
+   André wants the flexibility to move it without editing this file. The
+   "won't last forever" line below is still an honest claim ONLY as long as
+   a real expiry genuinely exists on both coupons in Teachable at all times.
+   If you ever make these coupons permanent/dateless, this copy must change
+   too -- an urgency claim with no real deadline behind it is exactly the
+   kind of "fake urgency" claim the UK CMA actively enforces against under
+   the Consumer Protection from Unfair Trading Regulations 2008. */
 const CHECKOUT_BASE_URL = 'https://www.steps2successedu.com/purchase';
 const BUNDLE_PRODUCT_ID = '6665883';
-const COUPON_EXPIRY_DISPLAY = '30 September 2026';
 
 function checkoutUrl(productId, couponCode){
   return `${CHECKOUT_BASE_URL}?product_id=${productId}&coupon_code=${couponCode}`;
@@ -392,8 +398,8 @@ function introHTML(){
   return `${topHTML()}${progressHTML(-1)}
     <div class="card fade-in">
       <span class="eyebrow">${CLOCK} Free &middot; 15–20 minutes</span>
-      <h1>Discover exactly which gaps are holding your child back &mdash; before the real SATs paper does.</h1>
-      <p class="lede">20 questions across Addition &amp; Subtraction, Multiplication &amp; Division, Fractions, and Decimals &amp; Percentages &mdash; spanning Year 3 to Year 6 content, so you'll see exactly which year group's work still needs attention.</p>
+      <h1>Discover exactly which gaps are holding your child back, before the real SATs paper does.</h1>
+      <p class="lede">20 questions across Addition &amp; Subtraction, Multiplication &amp; Division, Fractions, and Decimals &amp; Percentages, spanning Year 3 to Year 6 content, so you'll see exactly which year group's work still needs attention.</p>
       <div class="facts">
         <span class="f">${BOOK} 4 short sections, 5 questions each</span>
         <span class="f">${CHART} Personalised report at the end</span>
@@ -434,7 +440,7 @@ function sectionHTML(sIdx){
         <span class="sect-tag">Section ${sIdx+1} of 4</span>
       </div>
       <h2 class="sect-title">${esc(course.name)}</h2>
-      <p class="sect-sub">Take your best guess on each one &mdash; there's no pressure, this just shapes the report at the end.</p>
+      <p class="sect-sub">Take your best guess on each one. There's no pressure, this just shapes the report at the end.</p>
       <div class="qlist">${rows}</div>
       <div class="nav-row">
         ${sIdx > 0 ? `<button class="btn btn-ghost" id="btn-back">Back</button>` : ''}
@@ -472,7 +478,7 @@ function gateHTML(){
         <div class="gate-card">
           <span class="lock">${LOCK}</span>
           <h3>Unlock ${esc(state.name || 'the')} report</h3>
-          <p>Enter your email to see the full breakdown &mdash; by course, and by year group content &mdash; plus what to focus on next.</p>
+          <p>Enter your email to see the full breakdown by course and by year group content, plus what to focus on next.</p>
           <input type="email" id="in-email" placeholder="you@email.com" />
           <div class="hint-err" id="gate-err"></div>
           <button class="btn btn-primary" id="btn-unlock">Show me the report</button>
@@ -506,12 +512,12 @@ function verdictCopy(pct, byYear){
   const gaps = gapYearsSummary(byYear);
 
   if (!gaps){
-    return { label:'Strong all-round performance', body:`${name} is doing well across the board, with no clear year-group gaps &mdash; from here it's mostly about pace and exam technique.` };
+    return { label:'Strong all-round performance', body:`${name} is doing well across the board, with no clear year-group gaps. From here it's mostly about pace and exam technique.` };
   }
   const g = `${gaps.yearsPhrase}${gaps.worstCallout}`;
   if (pct < 45) return { label:'Significant gaps across the board', body:`${name} has gaps in ${g} right now. There's real ground to make up, but it's exactly what a structured, topic-by-topic run-through is built to fix quickly.` };
-  if (pct < 80) return { label:'Clear, fixable gaps', body:`${name} has real strengths to build on, but there are gaps in ${g} &mdash; exactly the kind of gap that costs easy marks on the real paper if it goes unaddressed.` };
-  return { label:'Strong, with gaps worth closing', body:`${name} is doing well overall, with gaps in ${g} &mdash; closing them is the difference between a good result and a great one.` };
+  if (pct < 80) return { label:'Clear, fixable gaps', body:`${name} has real strengths to build on, but there are gaps in ${g}, exactly the kind of gap that costs easy marks on the real paper if it goes unaddressed.` };
+  return { label:'Strong, with gaps worth closing', body:`${name} is doing well overall, with gaps in ${g}. Closing them is the difference between a good result and a great one.` };
 }
 
 function weakestCourse(byCourse){
@@ -570,7 +576,7 @@ function resultsHTML(){
 
       <div class="cta">
         <h3>Ready to close ${p} gaps?</h3>
-        <p>Fastest place to start is ${esc(worst.name)}, ${p} lowest-scoring area &mdash; or save more by covering all four courses now.</p>
+        <p>Fastest place to start is ${esc(worst.name)}, ${p} lowest-scoring area, or save more by covering all four courses now.</p>
         <div class="cta-options">
           <div class="cta-opt">
             <span class="cta-opt-h">Single course</span>
@@ -585,7 +591,7 @@ function resultsHTML(){
             <button class="btn btn-primary" id="btn-cta-bundle">Get the full bundle</button>
           </div>
         </div>
-        <div class="expiry">Both codes are valid until ${COUPON_EXPIRY_DISPLAY} &mdash; they won't last forever, so get in soon.</div>
+        <div class="expiry">These codes won't last forever, so get in soon.</div>
       </div>
 
       <div class="restart"><button id="btn-restart">Preview again from the start</button></div>
