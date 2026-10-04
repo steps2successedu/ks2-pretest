@@ -203,6 +203,31 @@
   .yr-fill{ display:block; height:100%; border-radius:99px; width:0%; background:linear-gradient(90deg,var(--cyan-mid),var(--gold)); transition:width .7s var(--ease); }
 
   .sect-block{ margin-bottom:32px; }
+  .score-only{ text-align:center; padding:6px 0 4px; }
+  .score-only .greet{ margin-bottom:14px; }
+  .score-only .score-ring{ margin:0 auto 12px; }
+  .score-only p{ color:var(--ink-soft); font-size:.95rem; }
+  .get-report{ background:var(--page); border-radius:var(--r-md); padding:22px 22px 18px; margin-top:22px; }
+  .get-report h3{ font-family:'Fraunces',Georgia,serif; font-size:1.2rem; color:var(--royal-deep); margin-bottom:8px; }
+  .get-report ul{ list-style:none; margin:0 0 16px; padding:0; }
+  .get-report li{ display:flex; gap:9px; align-items:flex-start; font-size:.92rem; color:var(--ink-soft); margin-bottom:7px; }
+  .get-report li svg{ color:var(--green); flex:0 0 auto; margin-top:4px; }
+  .get-report input{ margin-bottom:10px; }
+  .get-report .small{ font-size:.8rem; color:var(--ink-faint); margin-top:10px; line-height:1.5; }
+  .get-report .small a{ color:var(--royal); }
+  .sent-note{ background:var(--green-tint); color:#14603A; border-radius:var(--r-sm); padding:10px 14px; font-size:.88rem; margin-bottom:20px; }
+  .strand{ border:1px solid var(--line); border-radius:var(--r-md); padding:16px 18px; margin-bottom:14px; }
+  .strand-h{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:4px; }
+  .strand-h b{ font-size:1rem; color:var(--ink); }
+  .strand-h span{ font-weight:700; color:var(--royal-deep); font-variant-numeric:tabular-nums; }
+  .strand-level{ font-size:.88rem; color:var(--ink-soft); margin-bottom:10px; }
+  .qline{ display:grid; grid-template-columns:22px 1fr auto; gap:8px; align-items:start; font-size:.88rem; padding:7px 0; border-top:1px solid var(--line); }
+  .qline .ic{ font-weight:700; }
+  .qline .ic.ok{ color:var(--green); } .qline .ic.no{ color:#B3261E; }
+  .qline .qt{ color:var(--ink); }
+  .qline .qy{ color:var(--ink-faint); font-size:.78rem; white-space:nowrap; }
+  .qline .ans{ grid-column:2 / 4; font-size:.82rem; color:var(--ink-soft); margin-top:-2px; }
+
 
   .cta{
     background:var(--royal-deep); border-radius:var(--r-md); padding:26px; text-align:center;
@@ -247,7 +272,8 @@
    Scoring runs client-side as the quiz goes; the moment an email is entered
    at the gate, two things fire in the background (neither blocks the
    results reveal, both are best-effort): the attempt is logged to Supabase
-   via submit_readiness_attempt, and the email is handed to Mailchimp.
+   via submit_readiness_attempt, and the database then emails the parent a copy of
+   the report. The email is not added to any mailing list.
    ------------------------------------------------------------------ */
 
 const SUPABASE_URL = 'https://zjqykodcpvzxesvdamcc.supabase.co';
@@ -260,8 +286,6 @@ function getClient(){
   return _sb;
 }
 
-const MAILCHIMP_URL = 'https://steps2successedu.us1.list-manage.com/subscribe/post?u=1867bcbef6a3cddc45e0b0458&id=e2bb0852a8&f_id=0022c1e4f0';
-const MAILCHIMP_HONEYPOT = 'b_1867bcbef6a3cddc45e0b0458_e2bb0852a8';
 
 /* Best-effort, fire-and-forget -- neither of these should ever block or
    delay the results reveal. A blocked/failed request (ad blockers commonly
@@ -271,7 +295,7 @@ function logAttempt(scoreSummaryResult, pct){
   const client = getClient();
   if (client){
     const responses = QUESTIONS.map((q, i) => ({
-      course: q.course, year: q.year, given: state.answers[i],
+      course: q.course, year: q.year, text: q.text, answer: q.answers[0], given: state.answers[i],
       correct: q.answers.some(a => norm(a) === norm(state.answers[i]))
     }));
     client.rpc('submit_readiness_attempt', {
@@ -285,11 +309,8 @@ function logAttempt(scoreSummaryResult, pct){
       .catch(e => console.warn('Readiness attempt log error', e));
   }
 
-  const fd = new FormData();
-  fd.append('EMAIL', state.email);
-  fd.append('FNAME', state.name || '');
-  fd.append(MAILCHIMP_HONEYPOT, '');
-  fetch(MAILCHIMP_URL, { method:'POST', mode:'no-cors', body:fd }).catch(() => {});
+  // The email is used only to send this report (by the database, after the attempt is saved).
+  // It is NOT added to the Mailchimp list.
 }
 
 const COURSES = [
@@ -345,6 +366,10 @@ const QUESTIONS = [
   { course:'DP', year:5, text:'0.6 × 5 = ?', answers:['3'] },
   { course:'DP', year:5, text:'What is 10% of 350?', answers:['35'] },
 ];
+
+/* Switch to true once report emails are set up (Resend key + verified domain in Supabase).
+   Until then the page shows the full report on screen and does not promise an email. */
+const EMAIL_REPORTS = false;
 
 const YEAR_ORDER = [3,4,5,6];
 const TICK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
@@ -464,28 +489,47 @@ function scoreSummary(){
 function gateHTML(){
   const s = scoreSummary();
   const pct = Math.round(s.correct / s.total * 100);
+  const name = esc(state.name || 'Your child');
   return `${topHTML()}${progressHTML(4)}
-    <div class="card wide fade-in gate-wrap">
-      <div class="teaser" aria-hidden="true">
-        <div class="result-top">
-          <div class="greet">${esc(state.name || 'Your child')}'s readiness report</div>
-          <div class="score-ring" style="--pct:${pct}"><span class="num">${s.correct}<small>of ${s.total}</small></span></div>
-        </div>
-        <div class="breakdown-h"><h3>By course</h3><span class="rule"></span></div>
-        ${COURSES.map(() => `<div class="bd-row"><span class="bd-label">&nbsp;</span><div class="bd-track"><span class="bd-fill" style="width:60%;background:#CFD4EC"></span></div><span class="bd-score">&nbsp;</span></div>`).join('')}
+    <div class="card wide fade-in">
+      <div class="score-only">
+        <div class="greet">${name}'s score</div>
+        <div class="score-ring" style="--pct:${pct}"><span class="num">${s.correct}<small>of ${s.total}</small></span></div>
+        <p>Well done for finishing all 20 questions.</p>
       </div>
-      <div class="gate-overlay">
-        <div class="gate-card">
-          <span class="lock">${LOCK}</span>
-          <h3>Unlock ${esc(state.name || 'the')} report</h3>
-          <p>Enter your email to see the full breakdown by course and by year group content, plus what to focus on next.</p>
-          <input type="email" id="in-email" placeholder="you@email.com" />
-          <div class="hint-err" id="gate-err"></div>
-          <button class="btn btn-primary" id="btn-unlock">Show me the report</button>
-        </div>
+      <div class="get-report">
+        <h3>Get ${esc(possessive())} full report</h3>
+        <ul>
+          <li>${TICK}<span>Every question, with what was right and the correct answer for anything missed</span></li>
+          <li>${TICK}<span>A score for each strand: Addition &amp; Subtraction, Multiplication &amp; Division, Fractions, and Decimals &amp; Percentages</span></li>
+          <li>${TICK}<span>A rough year level for each strand, showing where the gaps start</span></li>
+          <li>${TICK}<span>Where to start next</span></li>
+        </ul>
+        <label for="in-email" style="display:block;font-weight:700;font-size:.88rem;color:var(--royal-deep);margin-bottom:6px">Your email address</label>
+        <input type="email" id="in-email" placeholder="you@email.com" autocomplete="email" />
+        <div class="hint-err" id="gate-err"></div>
+        <button class="btn btn-primary" id="btn-unlock">${EMAIL_REPORTS ? 'Show and email my report' : 'Show my report'}</button>
+        <p class="small">${EMAIL_REPORTS ? "We'll show the report here and email you a copy to keep. Your email is only used to send this report." : 'Your email is only used for this report.'} It is not added to any mailing list. <a href="https://www.steps2successedu.com/p/privacy" target="_blank" rel="noopener">Privacy notice</a></p>
       </div>
     </div>`;
 }
+
+/* Rough year level for one strand: the highest year where every question at
+   that year and below was right, and the first year with a wrong answer.
+   Five questions per strand, so this is a guide, not a grade. */
+function strandLevel(key){
+  const qs = QUESTIONS.map((q, i) => ({ q, right: isRightAt(i) })).filter(x => x.q.course === key);
+  const years = [...new Set(qs.map(x => x.q.year))].sort((a, b) => a - b);
+  let secure = null, gap = null;
+  for (const y of years){
+    if (qs.filter(x => x.q.year === y).every(x => x.right)) secure = y; else { gap = y; break; }
+  }
+  if (gap === null) return `Secure on everything tested, up to Year ${years[years.length - 1]} content`;
+  if (secure === null) return `Gaps from Year ${gap} content`;
+  return `Secure up to Year ${secure} content, with gaps from Year ${gap}`;
+}
+
+function isRightAt(i){ return QUESTIONS[i].answers.some(a => norm(a) === norm(state.answers[i])); }
 
 function possessive(){ return state.name ? state.name + "'s" : 'their'; }
 
@@ -553,6 +597,18 @@ function resultsHTML(){
       </div>`;
   }).join('');
 
+  const strandCards = COURSES.map(c => {
+    const d = s.byCourse[c.key];
+    const lines = QUESTIONS.map((q, i) => ({ q, i })).filter(x => x.q.course === c.key).sort((a, b) => a.q.year - b.q.year).map(({ q, i }) => {
+      const ok = isRightAt(i);
+      const given = String(state.answers[i] || '').trim();
+      return `<div class="qline"><span class="ic ${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'}</span><span class="qt">${esc(q.text)}</span><span class="qy">Year ${q.year}</span>
+        ${ok ? '' : `<span class="ans">Answered: ${given ? esc(given) : 'no answer'} · Correct answer: <strong>${esc(q.answers[0])}</strong></span>`}</div>`;
+    }).join('');
+    return `<div class="strand"><div class="strand-h"><b>${esc(c.name)}</b><span>${d.correct}/${d.total}</span></div>
+      <div class="strand-level">${strandLevel(c.key)}</div>${lines}</div>`;
+  }).join('');
+
   const p = possessive();
 
   return `${topHTML()}${progressHTML(4)}
@@ -562,6 +618,7 @@ function resultsHTML(){
         <div class="score-ring" style="--pct:${pct}"><span class="num">${s.correct}<small>of ${s.total}</small></span></div>
       </div>
 
+      ${state.emailSent ? `<div class="sent-note">A copy of this report is on its way to <strong>${esc(state.email)}</strong>. If it hasn't arrived in a few minutes, check your junk folder.</div>` : ''}
       <div class="verdict"><div class="vlabel">${v.label}.</div><div class="vbody">${v.body}</div></div>
 
       <div class="sect-block">
@@ -572,6 +629,11 @@ function resultsHTML(){
       <div class="sect-block">
         <div class="breakdown-h"><h3>By year-group content</h3><span class="rule"></span></div>
         ${yearRows}
+      </div>
+
+      <div class="sect-block">
+        <div class="breakdown-h"><h3>Strand by strand</h3><span class="rule"></span></div>
+        ${strandCards}
       </div>
 
       <div class="cta">
@@ -623,18 +685,18 @@ function attachHandlers(){
     document.getElementById('btn-unlock').addEventListener('click', () => {
       const val = document.getElementById('in-email').value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
-        document.getElementById('gate-err').textContent = 'Enter a valid email to unlock the report.';
+        document.getElementById('gate-err').textContent = 'Enter a valid email address to get the report.';
         return;
       }
       state.email = val;
       const s = scoreSummary();
       const pct = Math.round(s.correct / s.total * 100);
       logAttempt(s, pct);
-      state.unlocked = true; state.screen = 'results'; render();
+      state.unlocked = true; state.emailSent = EMAIL_REPORTS; state.screen = 'results'; render();
     });
   } else if (state.screen === 'results'){
     document.getElementById('btn-restart').addEventListener('click', () => {
-      state = { screen:'intro', name:'', yearGroup:'5', email:'', answers:new Array(QUESTIONS.length).fill(''), unlocked:false };
+      state = { screen:'intro', name:'', yearGroup:'5', email:'', answers:new Array(QUESTIONS.length).fill(''), unlocked:false, emailSent:false };
       render();
     });
     const worst = weakestCourse(scoreSummary().byCourse);
