@@ -505,11 +505,11 @@ function gateHTML(){
           <li>${TICK}<span>A rough year level for each strand, showing where the gaps start</span></li>
           <li>${TICK}<span>Where to start next</span></li>
         </ul>
-        <label for="in-email" style="display:block;font-weight:700;font-size:.88rem;color:var(--royal-deep);margin-bottom:6px">Your email address</label>
+        <label for="in-email" style="display:block;font-weight:700;font-size:.88rem;color:var(--royal-deep);margin-bottom:6px">Parent or carer's email address</label>
         <input type="email" id="in-email" placeholder="you@email.com" autocomplete="email" />
         <div class="hint-err" id="gate-err"></div>
         <button class="btn btn-primary" id="btn-unlock">${EMAIL_REPORTS ? 'Show and email my report' : 'Show my report'}</button>
-        <p class="small">${EMAIL_REPORTS ? "We'll show the report here and email you a copy to keep. Your email is only used to send this report." : 'Your email is only used for this report.'} It is not added to any mailing list. <a href="https://www.steps2successedu.com/p/privacy" target="_blank" rel="noopener">Privacy notice</a></p>
+        <p class="small">Grown-ups only, please. ${EMAIL_REPORTS ? "We'll show the report here and email you a copy to keep." : ''} We use your email to send this report and to see whether you later join one of our courses. It is not added to any mailing list, and we won't send you marketing emails. <a href="https://www.steps2successedu.com/p/privacy" target="_blank" rel="noopener">Privacy notice</a></p>
       </div>
     </div>`;
 }
