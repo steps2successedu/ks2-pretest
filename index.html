@@ -268,7 +268,7 @@
 
 <script>
 /* ------------------------------------------------------------------
-   KS2 Readiness Check -- interactive interface preview.
+   KS2 Readiness Check -- live page (pretest.steps2successedu.com).
    Scoring runs client-side as the quiz goes; the moment an email is entered
    at the gate, two things fire in the background (neither blocks the
    results reveal, both are best-effort): the attempt is logged to Supabase
@@ -314,7 +314,7 @@ function logAttempt(scoreSummaryResult, pct){
 }
 
 const COURSES = [
-  { key:'AS', name:'Addition & Subtraction', accent:'#2AB8BC', tint:'#E0F9FA', productId:'6653043' },
+  { key:'AS', name:'Addition & Subtraction', accent:'#2AB8BC', tint:'#E0F9FA', productId:'6913898', free:true }, /* £1 plan; parent types ASFREE at checkout (a 100% coupon in the link breaks the £0 checkout) */
   { key:'MD', name:'Multiplication & Division', accent:'#3D2FC4', tint:'#EEECFF', productId:'6653054' },
   { key:'FR', name:'Fractions', accent:'#C49A00', tint:'#FFF8CC', productId:'6653056' },
   { key:'DP', name:'Decimals & Percentages', accent:'#1800AB', tint:'#EEECFF', productId:'6653109' },
@@ -337,6 +337,7 @@ const CHECKOUT_BASE_URL = 'https://www.steps2successedu.com/purchase';
 const BUNDLE_PRODUCT_ID = '6665883';
 
 function checkoutUrl(productId, couponCode){
+  if (!couponCode) return `${CHECKOUT_BASE_URL}?product_id=${productId}`;
   return `${CHECKOUT_BASE_URL}?product_id=${productId}&coupon_code=${couponCode}`;
 }
 
@@ -642,9 +643,9 @@ function resultsHTML(){
         <div class="cta-options">
           <div class="cta-opt">
             <span class="cta-opt-h">Single course</span>
-            <span class="cta-opt-code">READY5</span>
-            <span class="cta-opt-d">5% off ${esc(worst.name)}</span>
-            <button class="btn btn-ghost-inv" id="btn-cta-single">Start with ${esc(worst.name)}</button>
+            <span class="cta-opt-code">${worst.free ? 'ASFREE' : 'READY5'}</span>
+            <span class="cta-opt-d">${worst.free ? `${esc(worst.name)} is free. Use ASFREE at the checkout. No card details needed.` : `5% off ${esc(worst.name)}`}</span>
+            <button class="btn btn-ghost-inv" id="btn-cta-single">${worst.free ? 'Get the free course' : `Start with ${esc(worst.name)}`}</button>
           </div>
           <div class="cta-opt featured">
             <span class="cta-opt-h">Full bundle</span>
@@ -653,10 +654,10 @@ function resultsHTML(){
             <button class="btn btn-primary" id="btn-cta-bundle">Get the full bundle</button>
           </div>
         </div>
-        <div class="expiry">These codes won't last forever, so get in soon.</div>
+        <div class="expiry">${worst.free ? "The READY10 code won't last forever, so get in soon." : "These codes won't last forever, so get in soon."}</div>
       </div>
 
-      <div class="restart"><button id="btn-restart">Preview again from the start</button></div>
+      <div class="restart"><button id="btn-restart">Start again</button></div>
     </div>`;
 }
 
@@ -701,7 +702,7 @@ function attachHandlers(){
     });
     const worst = weakestCourse(scoreSummary().byCourse);
     document.getElementById('btn-cta-single').addEventListener('click', () => {
-      window.location.href = checkoutUrl(worst.productId, 'READY5');
+      window.location.href = worst.free ? checkoutUrl(worst.productId) : checkoutUrl(worst.productId, 'READY5');
     });
     document.getElementById('btn-cta-bundle').addEventListener('click', () => {
       window.location.href = checkoutUrl(BUNDLE_PRODUCT_ID, 'READY10');
